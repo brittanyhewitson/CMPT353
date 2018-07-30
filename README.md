@@ -6,7 +6,7 @@ The walking data is in the "CMPT353/Data" folder and contains G-Force & Angular 
 
 ## Instructions:
 
-### Required libraries
+Required libraries:
 
       pip install scipy matplotlib pandas numpy
 
