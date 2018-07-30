@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
 from math import sqrt
-import re
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.pipeline import make_pipeline
@@ -54,13 +53,21 @@ def plot_gForce(df, x_axis):
     plt.show()
 '''
 
-def plot_acc(df, x_axis):
+def plot_acc(df, x_axis, output_name):
+    plt.figure()
     plt.plot(df[x_axis], df['acceleration'])
-    #plt.show()
+    plt.title('Total Linear Acceleration')
+    plt.xlabel(x_axis)
+    plt.savefig(output_name + '_acc.png')
+    plt.close()
 
-def plot_vel(df, x_axis):
+def plot_vel(df, x_axis, output_name):
+    plt.figure()
     plt.plot(df[x_axis], df['velocity'])
-    #plt.show()
+    plt.title('Total Angular Velocity')
+    plt.xlabel(x_axis)
+    plt.savefig(output_name + '_vel.png')
+    plt.close()
 
 def eucl_dist_w(df):
     return sqrt(df['wx']**2 + df['wy']**2 + df['wz']**2)
@@ -73,7 +80,7 @@ def main():
     names = ['1_left', '1_right', '2_left', '2_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
             '6_right', '7_left', '7_right', '8_left', '8_right']
 
-    data_sum = pd.read_csv('Data_Summary.csv')
+    data_sum = pd.read_csv('Data/Data_Summary.csv')
     data_sum['freq'] = ''
     data_sum = data_sum.set_index('F_name')
     
@@ -102,11 +109,11 @@ def main():
         dF = Fs/len(temp)
         data_FT['freq'] = np.arange(-Fs/2, Fs/2, dF)
 
-        plot_acc(data_FT, 'freq')
-        plot_vel(data_FT, 'freq')
+        plot_acc(data_FT, 'freq', names[i])
+        plot_vel(data_FT, 'freq', names[i])
 
         #Find the largest peak at a frequency greater than 0 to find the average steps per second
-        temp_FT = data_FT[data_FT.freq > 0]
+        temp_FT = data_FT[data_FT.freq > 0.1]
         ind = temp_FT['acceleration'].nlargest(n=2)
         max_ind = ind.idxmax()
         avg_freq = data_FT.at[max_ind, 'freq']
@@ -120,6 +127,8 @@ def main():
 
         sensor_data[str_filt] = data_filt
         sensor_data[str_FT] = data_FT
+
+    data_sum.to_csv('output.csv')
 
     print(data_sum)
 
