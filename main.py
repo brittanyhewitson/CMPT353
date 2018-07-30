@@ -2,9 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
-<<<<<<< HEAD
-from math import sqrt
-=======
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.pipeline import make_pipeline
@@ -40,7 +37,6 @@ def ML_output(X, y):
         svm=svc_model.score(X_test, y_test),
     ))
 
->>>>>>> b5d9c1b277b13ef69deac13d5219b11988b43e46
 
 def filter_df(df):
     b, a = signal.butter(3, 0.1, btype='lowpass', analog=False)
