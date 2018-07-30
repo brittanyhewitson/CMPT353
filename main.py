@@ -2,6 +2,41 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.pipeline import make_pipeline
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.naive_bayes import GaussianNB
+
+OUTPUT_TEMPLATE = (
+    'Bayesian classifier: {bayes:.3g}\n'
+    'kNN classifier:      {knn:.3g}\n'
+    'SVM classifier:      {svm:.3g}\n'
+)
+
+def ML_output(X, y):
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y)
+
+    bayes_model = GaussianNB()
+    knn_model = KNeighborsClassifier(n_neighbors=9)
+    svc_model = SVC(kernel='linear', C=1)
+
+    models = [bayes_model, knn_model, svc_model]
+    # plt.close('all')
+
+    for i, m in enumerate(models):  # yes, you can leave this loop in if you want.
+        m.fit(X_train, y_train)
+        # plot_predictions(m) # if we create a function to plot the prediction
+        # plt.savefig('predictions-%i.png' % (i,))
+
+    print(OUTPUT_TEMPLATE.format(
+        bayes=bayes_model.score(X_test, y_test),
+        knn=knn_model.score(X_test, y_test),
+        svm=svc_model.score(X_test, y_test),
+    ))
+
 
 def filter_df(df):
     b, a = signal.butter(3, 0.1, btype='lowpass', analog=False)
