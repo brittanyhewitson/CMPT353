@@ -26,32 +26,26 @@ def ML_output(X, y):
 
     models = [bayes_model, knn_model, svc_model]
     # plt.close('all')
+    print(X_train)
+    print(y_train)
 
     for i, m in enumerate(models):  # yes, you can leave this loop in if you want.
+        print(m)
         m.fit(X_train, y_train)
         # plot_predictions(m) # if we create a function to plot the prediction
         # plt.savefig('predictions-%i.png' % (i,))
-
+'''
     print(OUTPUT_TEMPLATE.format(
         bayes=bayes_model.score(X_test, y_test),
         knn=knn_model.score(X_test, y_test),
         svm=svc_model.score(X_test, y_test),
     ))
+    '''
 
 
 def filter_df(df):
     b, a = signal.butter(3, 0.1, btype='lowpass', analog=False)
     return signal.filtfilt(b, a, df)
-'''
-def plot_gForce(df, x_axis):
-    plt.subplot(3, 1, 1)
-    plt.plot(df[x_axis], df['gFx'])
-    plt.subplot(3, 1, 2)
-    plt.plot(df[x_axis], df['gFy'])
-    plt.subplot(3, 1, 3)
-    plt.plot(df[x_axis], df['gFz'])
-    plt.show()
-'''
 
 def plot_acc(df, x_axis, output_name):
     plt.figure()
@@ -75,15 +69,9 @@ def eucl_dist_w(df):
 def eucl_dist_a(df):
     return sqrt(df['ax']**2 + df['ay']**2 + df['az']**2)
 
-
-def main():
-    names = ['1_left', '1_right', '2_left', '2_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
-            '6_right', '7_left', '7_right', '8_left', '8_right']
-
-    data_sum = pd.read_csv('Data/Data_Summary.csv')
+def update_freq(data_sum, names):
     data_sum['freq'] = ''
     data_sum = data_sum.set_index('F_name')
-    
     sensor_data = {}
 
     for i in range(len(names)):
@@ -128,9 +116,40 @@ def main():
         sensor_data[str_filt] = data_filt
         sensor_data[str_FT] = data_FT
 
-    data_sum.to_csv('output.csv')
+    return data_sum
 
+
+def main():
+    names = ['1_left', '1_right', '2_left', '2_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
+            '6_right', '7_left', '7_right', '8_left', '8_right']
+    data_sum = pd.read_csv('Data/Data_Summary.csv')
+
+    #Find the average step frequencies for each person's left and right feet
+    data_sum = update_freq(data_sum, names)
+    
+    #Perform machine learning test on the result
+    is_na = pd.isna(data_sum)
+    data_sum = data_sum[is_na['Gender'] == False]
+    data_sum = data_sum[data_sum['freq'] != '']
+
+    
+    
+    
+    '''X = data_sum[['freq']].values
+    y = data_sum['Height'].values
+    ML_output(X, y)
+    '''
     print(data_sum)
+
+
+    #Use regression for when input and output are numbers
+
+    #Use classifier for determining gender, injured, or walking on stairs
+
+
+
+
+    data_sum.to_csv('output.csv')
 
 
 if __name__=='__main__':

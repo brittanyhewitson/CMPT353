@@ -1,4 +1,4 @@
-﻿F_name,Subject,Age,Height (cm),Gender,Weight (kg),Injury,Level of Activity,Activity of Choice
+﻿F_name,Subject,Age,Height,Gender,Weight,Injury,Level of Activity,Activity of Choice
 1_left,1,22,157,Female,68,None,Moderate,Running
 1_right,1,22,158,Female,69,None,Moderate,Running
 2_left,2,49,155,Female,55.8,None,High,Running
