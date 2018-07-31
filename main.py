@@ -50,16 +50,31 @@ def ML_regress(X, y):
     #Linear regression
     lin_reg = LinearRegression(fit_intercept=True)
     lin_reg.fit(X_train, y_train)
-    '''
+    plt.plot(X_train, y_train, 'b.')
+    plt.show()
+    plt.figure()
+    plt.plot(X_test, lin_reg.predict(X_test), 'g.')
+    plt.plot(X_train, lin_reg.predict(X_train), 'r-')
+    plt.show()
+
+    
     #Polynomial regression
-    poly = PolynomialFeatures(degree=3, include_bias=True)
+    poly = PolynomialFeatures(degree=11, include_bias=True)
     X_poly = poly.fit_transform(X_train)
-    pol_reg = LinearRegression(fit_intercept=False)
-    pol_reg.fit(X_poly, y)
-    '''
+    X_poly_test = poly.fit_transform(X_test)
+    pol_reg = LinearRegression(fit_intercept=True)
+    pol_reg.fit(X_poly, y_train)
+    plt.figure()
+    plt.plot(X_train, y_train, 'b.')
+    plt.show()
+    plt.figure()
+    plt.plot(X_poly_test, pol_reg.predict(X_poly_test), 'g.')
+    #plt.plot(X_poly, pol_reg.predict(X_poly), 'r-')
+    plt.show()
+
     print(OUTPUT_TEMPLATE_REGRESS.format(
         lin_reg=lin_reg.score(X_test, y_test),
-        pol_reg=0,
+        pol_reg=pol_reg.score(X_poly_test, y_test),
     ))
 
 
@@ -140,10 +155,11 @@ def update_freq(data_sum, names):
 
     return data_sum
 
-
 def main():
     names = ['1_left', '1_right', '2_left', '2_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
-            '6_right', '7_left', '7_right', '8_left', '8_right']
+            '6_right', '7_left', '7_right', '8_left', '8_right', '9_left', '9_right', '10_left', '10_right', \
+            '11_left', '11_right', '12_left', '12_right', '14_left', '14_right', '15_left', '15_right', \
+            '16_left', '16_right', '17_left', '17_right']
     data_sum = pd.read_csv('Data/Data_Summary.csv')
 
     #Find the average step frequencies for each person's left and right feet
@@ -168,7 +184,7 @@ def main():
     ML_classifier(X, data_sum['Activity of Choice'].values)
 
     #Find the P-Value to see if there is a relationship between height and step frequency
-    print('Linear Regression:')
+    print('Regression:')
     ML_regress(X, data_sum['Height'].values)
 
     #Use regression for when input and output are numbers
