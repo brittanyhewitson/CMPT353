@@ -28,8 +28,8 @@ def plot_acc(df, x_axis, output_name):
     plt.plot(df[x_axis], df['acceleration'])
     plt.title('Total Linear Acceleration')
     plt.xlabel(x_axis)
-    plt.savefig(output_name + '_acc.png')
-    plt.close()
+    #plt.savefig(output_name + '_acc.png')
+    #plt.close()
 
 def plot_vel(df, x_axis, output_name):
     plt.figure()
@@ -45,13 +45,24 @@ def eucl_dist_w(df):
 def eucl_dist_a(df):
     return sqrt(df['ax']**2 + df['ay']**2 + df['az']**2)
 	
-def analyzePeaks():
+# dir is the file directory, file_ext is the prefix of the file, n is the number of data sets
+#3 files should be named like file_ext1, file_ext2, etc.
+def analyzePeaks(dir, file_ext, n):
     # extracts the 2 largest peaks that are characteristic of a signal
     important_blips = pd.DataFrame()
     
-    for i in range(1,7):
-        str_name =  'Data/Greyson/r' + str(i) + '.csv'
-        left = pd.read_csv(str_name)
+    for i in range(1,n+1):
+	
+        # left and right 13 doesnt exist, skip for now
+        if i == 13:
+            continue
+            
+        if dir == 'Data':
+            str_name =  dir + '/' + str(i) + file_ext +  '.csv'
+        else:
+            str_name =  dir + '/' + file_ext + str(i) + '.csv'
+			
+        data = pd.read_csv(str_name)
 
         #str_name =  'Data/Greyson/r' + str(i) + '.csv'
         #right = pd.read_csv(str_name)
@@ -59,7 +70,7 @@ def analyzePeaks():
         walk_data = pd.DataFrame(columns=['acceleration'])
        
         #Take the Euclidean Norm
-        walk_data['acceleration'] = left.apply(eucl_dist_a, axis=1)
+        walk_data['acceleration'] = data.apply(eucl_dist_a, axis=1)
         
         #Filter the data
         data_filt = walk_data.apply(filter_df, axis=0)
@@ -70,14 +81,14 @@ def analyzePeaks():
         data_FT = data_FT.abs()
 
         #Determine the sampling frequency
-        Fs = round(len(left)/left.at[len(left)-1, 'time']) #samples per second
+        Fs = round(len(data)/data.at[len(data)-1, 'time']) #samples per second
         #dF = Fs/len(temp)
        
-        data_FT['freq'] = np.linspace(-Fs/2, Fs/2, num=len(left))
+        data_FT['freq'] = np.linspace(-Fs/2, Fs/2, num=len(data))
         
         # ignore low freq noise
         data_FT = data_FT[data_FT['freq'] > 0.4]
-        plot_acc(data_FT[data_FT.acceleration > 50], 'freq', '')
+        #plot_acc(data_FT[data_FT.acceleration > 50], 'freq', '')
         
         # Get the local max values, keep only the "significant" blips, lets say those above 40% of max blip
         ind = argrelextrema(data_FT.acceleration.values, np.greater)
@@ -90,9 +101,20 @@ def analyzePeaks():
 
 def main():
 
-    peaks = analyzePeaks()
-    plt.plot(peaks['freq'], peaks['acceleration'], 'bo')
+    right = analyzePeaks('Data/Greyson', 'r', 6)
+    left = analyzePeaks('Data/Greyson', 'l', 6)
+    others_left = analyzePeaks('Data', '_left', 18)
+    others_right = analyzePeaks('Data', '_left', 18)
+	
+    plt.plot(right['freq'], right['acceleration'], 'bo')
+    plt.title('Greyson right leg acceleration peaks')
+	
+    plt.figure()
+    plt.plot(others_right['freq'], others_right['acceleration'], 'bo')
+    plt.title('others right leg acceleration peaks')
     plt.show()
+	
+	
 
 
 if __name__=='__main__':
