@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import signal, stats
+from scipy import signal, stats, interpolate
 from math import sqrt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import FunctionTransformer, PolynomialFeatures
@@ -157,6 +157,24 @@ def update_freq(data_sum, names):
 
     return data_sum, sensor_data
 
+def B(x, k, i, t):
+    if k == 0:
+        return 1.0 if t[i] <= x < t[i+1] else 0.0
+    if t[i+k] == t[i]:
+        c1 = 0.0
+    else:
+        c1 = (x - t[i])/(t[i+k] - t[i]) * B(x, k-1, i, t)
+    if t[i+k+1] == t[i+1]:
+        c2 = 0.0
+    else:
+        c2 = (t[i+k+1] - x)/(t[i+k+1] - t[i+1]) * B(x, k-1, i+1, t)
+    return c1 + c2
+
+def bspline(x, t, c, k):
+    n = len(t) - k - 1
+    assert (n >= k+1) and (len(c) >= n)
+    return sum(c[i] * B(x, k, i, t) for i in range(n))
+
 def main():
     names = ['1_left', '1_right', '2_left', '2_right', '3_left', '3_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
             '6_right', '7_left', '7_right', '8_left', '8_right', '9_left', '9_right', '10_left', '10_right', \
@@ -214,12 +232,20 @@ def main():
 
     #Perform a stats polynomial regresson between the height and frequency
     print('Polynomial:')
-    coeff = np.polyfit(x_train, y_train, 11)
+    coeff = np.polyfit(x_train, y_train, 9)
     y_fit = np.polyval(coeff, x_test)
+    
+    #x_new = np.linspace(data_sum['freq'].min(), data_sum['freq'].max(), len(x_test))
+    x_new = np.linspace(x_test.min(), x_test.max(), len(x_test))
+    y_smooth = interpolate.spline(np.array(x_test),y_fit,x_new)
+
+    print(y_smooth)
 
     plt.figure()
     plt.plot(x_test, y_test, 'b.')
-    plt.plot(x_test, y_fit, 'r-')
+    plt.plot(x_test, y_fit, 'go-', markevery=100)
+    plt.plot(x_new, y_smooth, 'r-')
+    #plt.plot(x_new, [bspline(x, np.sort(x_test), coeff, 3) for x in x_new], 'r-')
     plt.show()
 
     #Find the P-Value to see if there is a relationship between height and step frequency with machine learning
@@ -227,7 +253,6 @@ def main():
     #ML_regress(X, data_sum['Height'].values)
 
     #Use regression for when input and output are numbers and use classifier for when determining gender, injured, or walking on stairs
-
 
     data_sum.to_csv('output.csv')
 
