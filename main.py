@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import signal
+from scipy import signal, stats
 from math import sqrt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import FunctionTransformer, PolynomialFeatures
@@ -108,7 +108,7 @@ def update_freq(data_sum, names):
     data_sum['freq'] = ''
     data_sum = data_sum.set_index('F_name')
     #Don't need the dictonary right now
-    #sensor_data = {}
+    sensor_data = {}
 
     for i in range(len(names)):
         str_name =  'Data/' + names[i] + '.csv'
@@ -130,8 +130,10 @@ def update_freq(data_sum, names):
 
         #Determine the sampling frequency
         Fs = round(len(temp)/temp.at[len(temp)-1, 'time']) #samples per second
-        dF = Fs/len(temp)
-        data_FT['freq'] = np.arange(-Fs/2, Fs/2, dF)
+        #dF = Fs/len(temp)
+
+        #data_FT['freq'] = np.arange(-Fs/2, Fs/2, dF)
+        data_FT['freq'] = np.linspace(-Fs/2, Fs/2, num=len(temp))
 
         plot_acc(data_FT, 'freq', names[i])
         plot_vel(data_FT, 'freq', names[i])
@@ -146,24 +148,24 @@ def update_freq(data_sum, names):
         data_sum.at[names[i], 'freq'] = avg_freq
 
         #Store in the dictionary
-        #str_filt = names[i] + '_filt'
-        #str_FT = names[i] + '_FT'
+        str_filt = names[i] + '_filt'
+        str_FT = names[i] + '_FT'
 
         #Don't need the dictionary right now
-        #sensor_data[str_filt] = data_filt
-        #sensor_data[str_FT] = data_FT
+        sensor_data[str_filt] = data_filt
+        sensor_data[str_FT] = data_FT
 
-    return data_sum
+    return data_sum, sensor_data
 
 def main():
-    names = ['1_left', '1_right', '2_left', '2_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
+    names = ['1_left', '1_right', '2_left', '2_right', '3_left', '3_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
             '6_right', '7_left', '7_right', '8_left', '8_right', '9_left', '9_right', '10_left', '10_right', \
             '11_left', '11_right', '12_left', '12_right', '14_left', '14_right', '15_left', '15_right', \
             '16_left', '16_right', '17_left', '17_right']
     data_sum = pd.read_csv('Data/Data_Summary.csv')
 
     #Find the average step frequencies for each person's left and right feet
-    data_sum = update_freq(data_sum, names)
+    data_sum, sensor_data = update_freq(data_sum, names)
     
     #Perform machine learning test on the result
     is_na = pd.isna(data_sum)
@@ -184,14 +186,29 @@ def main():
     ML_classifier(X, data_sum['Activity of Choice'].values)
 
     #Find the P-Value to see if there is a relationship between height and step frequency
-    print('Regression:')
-    ML_regress(X, data_sum['Height'].values)
+    #print('Regression:')
+    #ML_regress(X, data_sum['Height'].values)
 
-    #Use regression for when input and output are numbers
+    #Perform a statistical analysis
+    #Does each person have a different step frequency
+    #(Use an ANOVA test and note that f p < 0.05 there is a difference between the means of the groups)
+    print('ANOVA:')
+    #anova = stats.f_oneway(sensor_data['1_left_FT'].acceleration, sensor_data['1_right_FT'].acceleration, sensor_data['2_left_FT'].acceleration, sensor_data['2_right_FT'].acceleration)
+    #anova = stats.f_oneway(sensor_data)
+    #print(anova.pvalue)
 
-    #Use classifier for determining gender, injured, or walking on stairs
+    #Is there a correlation between height and step frequency
+    print('Stats Regression:')
+    x = data_sum['freq'].apply(float)
+    y = data_sum['Height'].apply(float)
 
+    reg = stats.linregress(data_sum['freq'].apply(float), data_sum['Height'].apply(float))
+    print('r-value: ', reg.rvalue)
+    print('p-value: ', reg.pvalue)
+    print('slope: ', reg.slope)
+    print('intercept: ', reg.intercept)
 
+    #Use regression for when input and output are numbers and use classifier for when determining gender, injured, or walking on stairs
 
 
     data_sum.to_csv('output.csv')
