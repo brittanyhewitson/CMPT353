@@ -3,8 +3,8 @@
 1_right,1,22,157,Female,68,None,Moderate,Running
 2_left,2,49,155,Female,55.8,None,High,Running
 2_right,2,49,155,Female,55.8,None,High,Running
-3_left,3,24,,,,None,,
-3_right,3,24,,,,None,,
+3_left,3,24,157.5,Female,63,None,Moderate,Running
+3_right,3,24,157.5,Female,63,None,Moderate,Running
 4_left,4,19,172.7,Female,54.4,None,High,Running
 4_right,4,19,172.7,Female,54.4,None,High,Running
 5_left,5,18,177.8,Male,90.7,None,High,Lacrosse
