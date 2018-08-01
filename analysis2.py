@@ -3,13 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal, stats
 from math import sqrt
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import FunctionTransformer, PolynomialFeatures
-from sklearn.pipeline import make_pipeline
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.naive_bayes import GaussianNB
-from sklearn.linear_model import LinearRegression
+from scipy.signal import argrelextrema
 
 OUTPUT_TEMPLATE_CLASSIFIER = (
     'Bayesian classifier: {bayes:.3g}\n'
@@ -98,9 +92,7 @@ def main():
 
     peaks = analyzePeaks()
     plt.plot(peaks['freq'], peaks['acceleration'], 'bo')
-    
-
-    data_sum.to_csv('output.csv')
+    plt.show()
 
 
 if __name__=='__main__':
