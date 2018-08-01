@@ -185,10 +185,6 @@ def main():
     print('Activity of Choice:')
     ML_classifier(X, data_sum['Activity of Choice'].values)
 
-    #Find the P-Value to see if there is a relationship between height and step frequency
-    #print('Regression:')
-    #ML_regress(X, data_sum['Height'].values)
-
     #Perform a statistical analysis
     #Does each person have a different step frequency
     #(Use an ANOVA test and note that f p < 0.05 there is a difference between the means of the groups)
@@ -197,16 +193,38 @@ def main():
     #anova = stats.f_oneway(sensor_data)
     #print(anova.pvalue)
 
-    #Is there a correlation between height and step frequency
+    #Perform a stats linear regression between the height and the frequency
     print('Stats Regression:')
     x = data_sum['freq'].apply(float)
     y = data_sum['Height'].apply(float)
 
-    reg = stats.linregress(data_sum['freq'].apply(float), data_sum['Height'].apply(float))
+    x_train, x_test, y_train, y_test = train_test_split(x, y)
+
+    print('Linear:')
+    reg = stats.linregress(x_train, y_train)
     print('r-value: ', reg.rvalue)
     print('p-value: ', reg.pvalue)
     print('slope: ', reg.slope)
     print('intercept: ', reg.intercept)
+
+    plt.figure()
+    plt.plot(x_test, y_test, 'b.')
+    plt.plot(x_test, x_test*reg.slope + reg.intercept, 'r-', linewidth=3)
+    plt.show()
+
+    #Perform a stats polynomial regresson between the height and frequency
+    print('Polynomial:')
+    coeff = np.polyfit(x_train, y_train, 11)
+    y_fit = np.polyval(coeff, x_test)
+
+    plt.figure()
+    plt.plot(x_test, y_test, 'b.')
+    plt.plot(x_test, y_fit, 'r-')
+    plt.show()
+
+    #Find the P-Value to see if there is a relationship between height and step frequency with machine learning
+    #print('Regression:')
+    #ML_regress(X, data_sum['Height'].values)
 
     #Use regression for when input and output are numbers and use classifier for when determining gender, injured, or walking on stairs
 
