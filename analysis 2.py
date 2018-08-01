@@ -56,10 +56,10 @@ def analyzePeaks():
     important_blips = pd.DataFrame()
     
     for i in range(1,7):
-        str_name =  'C:/Users/Greyson/Documents/353proj/CMPT353/Data/Greyson/r' + str(i) + '.csv'
+        str_name =  'Data/Greyson/r' + str(i) + '.csv'
         left = pd.read_csv(str_name)
 
-        #str_name =  'C:/Users/Greyson/Documents/353proj/CMPT353/Data/Greyson/r' + str(i) + '.csv'
+        #str_name =  'Data/Greyson/r' + str(i) + '.csv'
         #right = pd.read_csv(str_name)
         
         walk_data = pd.DataFrame(columns=['acceleration'])
