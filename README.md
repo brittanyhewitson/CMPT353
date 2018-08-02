@@ -8,7 +8,7 @@ The walking data is in the "CMPT353/Data" folder and contains Linear Acceleratio
 
 Required libraries:
 
-      pip install scipy matplotlib pandas numpy sklearn
+      pip install scipy matplotlib pandas numpy sklearn statsmodels
 
 Simply clone the repository and run the following command:
       
