@@ -4,13 +4,15 @@ import matplotlib.pyplot as plt
 from scipy import signal, stats, interpolate
 from math import sqrt, log
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import FunctionTransformer, PolynomialFeatures
+from sklearn.preprocessing import FunctionTransformer, PolynomialFeatures, StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
+import seaborn
+seaborn.set()
 
 names = ['1_left', '1_right', '2_left', '2_right', '3_left', '3_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
         '6_right', '7_left', '7_right', '8_left', '8_right', '9_left', '9_right', '10_left', '10_right', \
@@ -46,6 +48,23 @@ OUTPUT_TEMPLATE_REGRESS = (
 def ML_classifier(X, y):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y)
+    '''
+    #Try scaling:
+    bayes_model = make_pipeline(
+        StandardScaler(),
+        GaussianNB()
+    )
+
+    knn_model = make_pipeline(
+        StandardScaler(), 
+        KNeighborsClassifier(n_neighbors=4)
+    )
+
+    svc_model = make_pipeline(
+        StandardScaler(), 
+        SVC(kernel='linear')
+    )
+    '''
 
     bayes_model = GaussianNB()
     knn_model = KNeighborsClassifier(n_neighbors=3)
@@ -65,7 +84,7 @@ def ML_classifier(X, y):
     ))
 
 
-def ML_regress(X, y):
+def ML_regress(X, y, name_test):
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
     #Linear regression
@@ -75,7 +94,10 @@ def ML_regress(X, y):
     plt.figure()
     plt.plot(X_test, y_test, 'b.')
     plt.plot(X_test, lin_reg.predict(X_test), 'g-')
-    plt.savefig('ML_regression.png')
+    plt.xlabel('Step Frequency')
+    plt.ylabel(name_test)
+    plt.title('ML Linear regression for ' + name_test + 'Versus Step Frequency')
+    plt.savefig('ML_regression' + name_test + '.png')
 
     #Score is the r-squared value. If this value is negative it means the linear regression is worse than using
     #a horizontal line (i.e. the mean)
@@ -84,7 +106,7 @@ def ML_regress(X, y):
     ))
 
 
-def stats_regress(x, y):
+def stats_regress(x, y, name_test):
     x_train, x_test, y_train, y_test = train_test_split(x, y)
 
     reg = stats.linregress(x_train, y_train)
@@ -92,19 +114,32 @@ def stats_regress(x, y):
     plt.figure()
     plt.plot(x_test, y_test, 'b.')
     plt.plot(x_test, x_test*reg.slope + reg.intercept, 'r-', linewidth=3)
-    plt.savefig('lin_regression.png')
+    plt.xlabel('Step Frequency')
+    plt.ylabel(name_test)
+    plt.title('Linear regression for ' + name_test + 'Versus Step Frequency')
+    plt.savefig('lin_regression' + name_test + '.png')
     plt.close()
 
+    #Perform polynomial regression
     x_new_test = np.linspace(x_test.min(), x_test.max(), len(x_test))
 
-    coeff = np.polyfit(x, y, 7)
+    coeff = np.polyfit(x, y, 5)
     y_fit = np.polyval(coeff, x_new_test)
+    print(coeff)
 
     plt.figure()
     plt.plot(x_test, y_test, 'b.')
-    plt.plot(x_new_test, y_fit, 'g-')
-    plt.savefig('poly_regression.png')
+    plt.plot(x_new_test, y_fit, 'go-')
+    plt.xlabel('Step Frequency')
+    plt.ylabel(name_test)
+    plt.title('Polynomial regression for ' + name_test + 'Versus Step Frequency')
+    plt.savefig('poly_regression' + name_test + '.png')
     plt.close()
+
+    #residuals = y_train - (reg.slope*x_train + reg.intercept)
+    #plt.figure()
+    #plt.plot(x_train, residuals, 'b-')
+    #plt.show()
 
     data = pd.DataFrame({'y': y, 'x': x, 'intercept': 1})
     results = sm.OLS(data['y'], data[['x', 'intercept']]).fit()
@@ -158,7 +193,7 @@ def calc_FT(df, temp, i, num):
     df_FT = df_FT.abs()
 
     #Determine the sampling frequency
-    Fs = round(len(temp)/temp['time'].iloc[-1]) #samples per second
+    Fs = round(len(temp)/(temp['time'].iloc[-1]-temp['time'].iloc[0])) #samples per second
     df_FT['freq'] = np.linspace(-Fs/2, Fs/2, num=len(temp))
 
     plot_acc(df_FT, 'freq', names[i] + '_' + str(num))
@@ -239,7 +274,7 @@ def main():
     temp_1 = data_sum.rename(columns={'freq_1': 'freq'})
     temp_2 = data_sum.rename(columns={'freq_2': 'freq'})
     temp_df = pd.concat([temp_1, temp_2], axis=0)
-
+    temp_df_X = temp_df['freq'].apply(float)
     X = temp_df[['freq']].values
     
     #See if there is a relationshp between step frequency and level of activity
@@ -278,17 +313,38 @@ def main():
     #anova = stats.f_oneway(*acc_FT)
     print(anova.pvalue)
 
-    #Perform a stats linear regression between the height and the frequency
+    #Stats Regression
     print('Stats Regression:')
     temp_df = temp_df.sort_values('freq')
     x = temp_df['freq'].apply(float)
-    y = temp_df['Height'].apply(float)
 
-    stats_regress(x, y)
+    #Perform a stats regression between the height and the frequency
+    print('Height:')
+    stats_regress(x, temp_df['Height'].apply(float), 'Height')
+
+    #Perform a stats regression between the age and the frequency
+    print('Age:')
+    stats_regress(x, temp_df['Age'].apply(float), 'Age')
+
+    #Perform a stats regression between the weight and the frequency
+    print('Weight:')
+    stats_regress(x, temp_df['Weight'].apply(float), 'Weight')
+
     
+    #Perform a machine learning regression
+    print('ML Regression:')
+
     #Find the P-Value to see if there is a relationship between height and step frequency with machine learning
-    #print('Regression:')
-    ML_regress(temp_df[['freq']].values, temp_df['Height'].values)
+    print('Height:')
+    ML_regress(X, temp_df['Height'].values, 'Height')
+
+    #Find the P-Value to see if there is a relationship between age and step frequency with machine learning
+    print('Age:')
+    ML_regress(X, temp_df['Age'].values, 'Age')
+
+    #Find the P-Value to see if there is a relationship between weight and step frequency with machine learning
+    print('Weight:')
+    ML_regress(X, temp_df['Weight'].values, 'Weight')
 
     data_sum.to_csv('output.csv')
 
