@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal, stats, interpolate
-from math import sqrt
+from math import sqrt, log
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import FunctionTransformer, PolynomialFeatures
 from sklearn.pipeline import make_pipeline
@@ -11,7 +11,6 @@ from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
-import math
 
 names = ['1_left', '1_right', '2_left', '2_right', '3_left', '3_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
         '6_right', '7_left', '7_right', '8_left', '8_right', '9_left', '9_right', '10_left', '10_right', \
@@ -43,6 +42,7 @@ OUTPUT_TEMPLATE_REGRESS = (
     'Polynomial coefficients: {pol_reg}\n'
 )
 
+
 def ML_classifier(X, y):
 
     X_train, X_test, y_train, y_test = train_test_split(X, y)
@@ -63,6 +63,7 @@ def ML_classifier(X, y):
         knn=knn_model.score(X_test, y_test),
         svm=svc_model.score(X_test, y_test),
     ))
+
 
 def ML_regress(X, y):
     X_train, X_test, y_train, y_test = train_test_split(X, y)
@@ -96,7 +97,7 @@ def stats_regress(x, y):
 
     x_new_test = np.linspace(x_test.min(), x_test.max(), len(x_test))
 
-    coeff = np.polyfit(x, y, 3)
+    coeff = np.polyfit(x, y, 7)
     y_fit = np.polyval(coeff, x_new_test)
 
     plt.figure()
@@ -118,9 +119,11 @@ def stats_regress(x, y):
         pol_reg=coeff,
     ))
 
+
 def filter_df(df):
     b, a = signal.butter(3, 0.1, btype='lowpass', analog=False)
     return signal.filtfilt(b, a, df)
+
 
 def plot_acc(df, x_axis, output_name):
     plt.figure()
@@ -130,6 +133,7 @@ def plot_acc(df, x_axis, output_name):
     plt.savefig(output_name + '_acc.png')
     plt.close()
 
+
 def plot_vel(df, x_axis, output_name):
     plt.figure()
     plt.plot(df[x_axis], df['velocity'])
@@ -138,19 +142,50 @@ def plot_vel(df, x_axis, output_name):
     plt.savefig(output_name + '_vel.png')
     plt.close()
 
+
 def eucl_dist_w(df):
     return sqrt(df['wx']**2 + df['wy']**2 + df['wz']**2)
+
 
 def eucl_dist_a(df):
     return sqrt(df['ax']**2 + df['ay']**2 + df['az']**2)
 
-def update_freq(data_sum, names):
+
+def calc_FT(df, temp, i, num):
+    #Take the Fourier Transform of the data
+    df_FT = df.apply(np.fft.fft, axis=0)
+    df_FT = df_FT.apply(np.fft.fftshift, axis=0)
+    df_FT = df_FT.abs()
+
+    #Determine the sampling frequency
+    Fs = round(len(temp)/temp['time'].iloc[-1]) #samples per second
+    df_FT['freq'] = np.linspace(-Fs/2, Fs/2, num=len(temp))
+
+    plot_acc(df_FT, 'freq', names[i] + '_' + str(num))
+    plot_vel(df_FT, 'freq', names[i] + '_' + str(num))
+
+    #Find the largest peak at a frequency greater than 0 to determine the average steps per second
+    temp_FT = df_FT[df_FT.freq > 0.1]
+    ind = temp_FT['acceleration'].nlargest(n=1)
+    max_ind = ind.idxmax()
+    avg_freq = df_FT.at[max_ind, 'freq']
+
+    #Transform the data to fit a normal distribution
+    max_val = df_FT['acceleration'].nlargest(n=1)
+    max_val_ind = max_val.idxmax()
+    df_FT.at[max_val_ind, 'acceleration'] = temp_FT['acceleration'].max()
+    #df_FT['acceleration'] = df_FT['acceleration'].apply(log)
+
+    plot_acc(df_FT, 'freq', names[i] + '_transformed_' + str(num))
+
+    return df_FT, avg_freq
+
+
+def update_spreadsheet(data_sum, names):
     data_sum['freq_1'] = ''
     data_sum['freq_2'] = ''
     data_sum = data_sum.set_index('F_name')
-    #Don't need the dictonary right now
     sensor_data = {}
-    
 
     for i in range(len(names)):
         str_name =  'Data/' + names[i] + '.csv'
@@ -169,81 +204,24 @@ def update_freq(data_sum, names):
         half_val = round(data_filt.shape[0]/2)
         data_filt_1 = data_filt.iloc[:half_val, :]
         data_filt_2 = data_filt.iloc[half_val:, :]
-
         temp_1 = temp.iloc[:half_val, :]
         temp_2 = temp.iloc[half_val:, :]
 
-        #Take the Fourier Transform of each half of the data
-        data_FT_1 = data_filt_1.apply(np.fft.fft, axis=0)
-        data_FT_1 = data_FT_1.apply(np.fft.fftshift, axis=0)
-        data_FT_1 = data_FT_1.abs()
+        #Apply the Fourier Transform on the data
+        data_FT, avg_freq = calc_FT(data_filt, temp, i, 0)
+        data_FT_1, avg_freq_1 = calc_FT(data_filt_1, temp_1, i, 1)
+        data_FT_2, avg_freq_2 = calc_FT(data_filt_2, temp_2, i, 2)
 
-        data_FT_2 = data_filt_2.apply(np.fft.fft, axis=0)
-        data_FT_2 = data_FT_2.apply(np.fft.fftshift, axis=0)
-        data_FT_2 = data_FT_2.abs()
-
-        #Determine the sampling frequency
-        Fs_1 = round(len(temp_1)/temp_1.at[len(temp_1)-1, 'time']) #samples per second
-        Fs_2 = round(len(temp_2)/temp_2.at[(len(temp_2)-1) + len(temp_1), 'time']) #samples per second
-        #dF = Fs/len(temp)
-
-        #data_FT['freq'] = np.arange(-Fs/2, Fs/2, dF)
-        data_FT_1['freq'] = np.linspace(-Fs_1/2, Fs_1/2, num=len(temp_1))
-        data_FT_2['freq'] = np.linspace(-Fs_2/2, Fs_2/2, num=len(temp_2))
-
-        plot_acc(data_FT_1, 'freq', names[i] + '_1')
-        plot_vel(data_FT_1, 'freq', names[i] + '_1')
-
-        plot_acc(data_FT_2, 'freq', names[i] + '_2')
-        plot_vel(data_FT_2, 'freq', names[i] + '_2')
-
-        #Find the largest peak at a frequency greater than 0 to determine the average steps per second
-        temp_FT = data_FT_1[data_FT_1.freq > 0.1]
-        ind = temp_FT['acceleration'].nlargest(n=1)
-        max_ind = ind.idxmax()
-        avg_freq_1 = data_FT_1.at[max_ind, 'freq']
-
-        #Store into the main dataframe and FT dataframe
+        #Save the average step frequencies into the main spreadsheet
         data_sum.at[names[i], 'freq_1'] = avg_freq_1
-
-        #Transform the data to fit a normal distribution
-        max_val = data_FT_1['acceleration'].nlargest(n=1)
-        max_val_ind = max_val.idxmax()
-        data_FT_1.at[max_val_ind, 'acceleration'] = temp_FT['acceleration'].max()
-        data_FT_1['acceleration'] = data_FT_1['acceleration'].apply(math.log)
-        #data_FT['acceleration'] = data_FT['acceleration'].apply(abs)
-
-        plot_acc(data_FT_1, 'freq', names[i] + '_transformed_1')
-
-        temp_FT = data_FT_2[data_FT_2.freq > 0.1]
-        ind = temp_FT['acceleration'].nlargest(n=1)
-        max_ind = ind.idxmax()
-        avg_freq_2 = data_FT_2.at[max_ind, 'freq']
-
-        #Store into the main dataframe and FT dataframe
         data_sum.at[names[i], 'freq_2'] = avg_freq_2
 
-        #Transform the data to fit a normal distribution
-        max_val = data_FT_2['acceleration'].nlargest(n=1)
-        max_val_ind = max_val.idxmax()
-        data_FT_2.at[max_val_ind, 'acceleration'] = temp_FT['acceleration'].max()
-        data_FT_2['acceleration'] = data_FT_2['acceleration'].apply(math.log)
-        #data_FT['acceleration'] = data_FT['acceleration'].apply(abs)
-
-        plot_acc(data_FT_2, 'freq', names[i] + '_transformed_2')
-
-        #if i==0:
-        #    acc_FT = pd.DataFrame({names[i]: [data_FT]})
-        #else:
-        #    pd.concat([acc_FT, data_FT], axis=1)
-
-        #Store in the dictionary
+        #Save the Fourier Spectrum into a dictionary
         str_filt = names[i] + '_filt'
         str_FT = names[i] + '_FT'
 
-        #Don't need the dictionary right now
-        sensor_data[str_filt] = data_filt
-        sensor_data[str_FT] = data_FT_1
+        #sensor_data[str_filt] = data_filt
+        sensor_data[str_FT] = data_FT
 
     return data_sum, sensor_data
 
@@ -251,50 +229,39 @@ def main():
     data_sum = pd.read_csv('Data/Data_Summary.csv')
 
     #Find the average step frequencies for each person's left and right feet
-    data_sum, sensor_data = update_freq(data_sum, names)
+    data_sum, sensor_data = update_spreadsheet(data_sum, names)
     
     #Perform machine learning test on the result
     is_na = pd.isna(data_sum)
     data_sum = data_sum[is_na['Gender'] == False]
     data_sum = data_sum[data_sum['freq_1'] != '']
     data_sum = data_sum[data_sum['freq_2'] != '']
-    X_1 = data_sum[['freq_1']].values
-    X_2 = data_sum[['freq_2']].values
-    X = np.concatenate((X_1, X_2), axis=0)
-    '''
-    X_temp_1 = data_sum.rename(columns={'freq_1': 'freq'})
-    X_temp_2 = data_sum.rename(columns={'freq_2': 'freq'})
-    X_df = pd.concat([X_temp_1, X_temp_2], axis=0)
+    temp_1 = data_sum.rename(columns={'freq_1': 'freq'})
+    temp_2 = data_sum.rename(columns={'freq_2': 'freq'})
+    temp_df = pd.concat([temp_1, temp_2], axis=0)
 
-    X = X_df[['freq']].values
-    '''
-
-    print(X_2)
+    X = temp_df[['freq']].values
     
     #See if there is a relationshp between step frequency and level of activity
     print('Level of Activity:')
-    y = data_sum['Level of Activity'].values
-    y = np.concatenate((y, y), axis=0)
-    ML_classifier(X, y)
+    ML_classifier(X, temp_df['Level of Activity'].values)
 
     #See if there is a relationship between step frequency and gender
     print('Gender:')
-    y = data_sum['Gender'].values
-    y = np.concatenate((y, y), axis=0)
-    ML_classifier(X, y)
+    ML_classifier(X, temp_df['Gender'].values)
 
     #See if there is a relationship between step frequency and activity of choice
     print('Activity of Choice:')
-    y = data_sum['Activity of Choice'].values
-    y = np.concatenate((y, y), axis=0)
-    ML_classifier(X, y)
+    ML_classifier(X, temp_df['Activity of Choice'].values)
 
     #Perform a statistical analysis
     #Does each person have a different step frequency
     #Perform a normal test on the data
+    '''
     for i in range(len(names_FT)):
         print('Normal test:')
         print(stats.normaltest(sensor_data[names_FT[i]].acceleration).pvalue)
+    '''
 
     #(Use an ANOVA test and note that f p < 0.05 there is a difference between the means of the groups)
     print('ANOVA:')
@@ -313,26 +280,15 @@ def main():
 
     #Perform a stats linear regression between the height and the frequency
     print('Stats Regression:')
-    #temp_df_1 = data_sum.sort_values('freq_1')
-    #x_1 = temp_df_1['freq_1'].apply(float)
-    #y = temp_df_1['Height'].apply(float)
-    temp_df_1 = pd.concat([data_sum['Height'], data_sum['freq_1']], axis=1)
-    temp_df_1 = temp_df_1.rename(columns={'freq_1':'freq'})
-    temp_df_2 = pd.concat([data_sum['Height'], data_sum['freq_2']], axis=1)
-    temp_df_2 = temp_df_2.rename(columns={'freq_2':'freq'})
-    temp_df = pd.concat([temp_df_1, temp_df_2], axis=0)
-    
     temp_df = temp_df.sort_values('freq')
     x = temp_df['freq'].apply(float)
     y = temp_df['Height'].apply(float)
 
     stats_regress(x, y)
-
     
     #Find the P-Value to see if there is a relationship between height and step frequency with machine learning
     #print('Regression:')
-    ML_regress(temp_df[['freq']].values, data_sum['Height'].values)
-
+    ML_regress(temp_df[['freq']].values, temp_df['Height'].values)
 
     data_sum.to_csv('output.csv')
 
