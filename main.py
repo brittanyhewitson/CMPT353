@@ -10,6 +10,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
 
 OUTPUT_TEMPLATE_CLASSIFIER = (
     'Bayesian classifier: {bayes:.3g}\n'
@@ -17,9 +18,18 @@ OUTPUT_TEMPLATE_CLASSIFIER = (
     'SVM classifier:      {svm:.3g}\n'
 )
 
+OUTPUT_TEMPLATE_ML_REGRESS = (
+    'Linear regression: {lin_reg:.3g}\n'
+)
+
 OUTPUT_TEMPLATE_REGRESS = (
-    'Linear regression:     {lin_reg:.3g}\n'
-    'Polynomial regression: {pol_reg:.3g}\n'
+    'p-value:       {pval:.3g}\n'
+    'r-value:       {rval:.3g}\n'
+    'r-squared:     {rsquared:.3g}\n'
+    'slope:         {slope:.3g}\n'
+    'intercept:     {intercept:.3g}\n'
+    'OLS summary:   {summary:}\n'
+    'Polynomial coefficients: {pol_reg}\n'
 )
 
 def ML_classifier(X, y):
@@ -47,9 +57,11 @@ def ML_classifier(X, y):
 def ML_regress(X, y):
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
+
     #Linear regression
     lin_reg = LinearRegression(fit_intercept=True)
     lin_reg.fit(X_train, y_train)
+
     plt.plot(X_train, y_train, 'b.')
     plt.show()
     plt.figure()
@@ -57,25 +69,47 @@ def ML_regress(X, y):
     plt.plot(X_train, lin_reg.predict(X_train), 'r-')
     plt.show()
 
-    
-    #Polynomial regression
-    poly = PolynomialFeatures(degree=11, include_bias=True)
-    X_poly = poly.fit_transform(X_train)
-    X_poly_test = poly.fit_transform(X_test)
-    pol_reg = LinearRegression(fit_intercept=True)
-    pol_reg.fit(X_poly, y_train)
+    #Score is the r-squared value. If this value is negative it means the linear regression is worse than using
+    #a horizontal line (i.e. the mean)
+    print(OUTPUT_TEMPLATE_ML_REGRESS.format(
+        lin_reg=lin_reg.score(X_test, y_test),
+    ))
+
+
+def stats_regress(x, y):
+    x_train, x_test, y_train, y_test = train_test_split(x, y)
+
+    reg = stats.linregress(x_train, y_train)
+
     plt.figure()
-    plt.plot(X_train, y_train, 'b.')
-    plt.show()
-    plt.figure()
-    plt.plot(X_poly_test, pol_reg.predict(X_poly_test), 'g.')
-    #plt.plot(X_poly, pol_reg.predict(X_poly), 'r-')
+    plt.plot(x_test, y_test, 'b.')
+    plt.plot(x_test, x_test*reg.slope + reg.intercept, 'r-', linewidth=3)
     plt.show()
 
+    x_new_test = np.linspace(x_test.min(), x_test.max(), len(x_test))
+
+    coeff = np.polyfit(x, y, 3)
+    y_fit = np.polyval(coeff, x_new_test)
+
+    plt.figure()
+    plt.plot(x_test, y_test, 'b.')
+    plt.plot(x_new_test, y_fit, 'go-')
+    plt.show()
+
+    data = pd.DataFrame({'y': y, 'x': x, 'intercept': 1})
+    results = sm.OLS(data['y'], data[['x', 'intercept']]).fit()
+
+
     print(OUTPUT_TEMPLATE_REGRESS.format(
-        lin_reg=lin_reg.score(X_test, y_test),
-        pol_reg=pol_reg.score(X_poly_test, y_test),
+        pval=reg.pvalue,
+        rval=reg.rvalue,
+        rsquared=reg.rvalue**2,
+        slope=reg.slope,
+        intercept=reg.intercept,
+        summary=results.summary(),
+        pol_reg=coeff,
     ))
+
 
 
 def filter_df(df):
@@ -195,46 +229,19 @@ def main():
 
     #Perform a stats linear regression between the height and the frequency
     print('Stats Regression:')
-    x = data_sum['freq'].apply(float)
-    y = data_sum['Height'].apply(float)
+    temp_df = data_sum.sort_values('freq')
+    x = temp_df['freq'].apply(float)
+    y = temp_df['Height'].apply(float)
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y)
+    stats_regress(x, y)
 
-    print('Linear:')
-    reg = stats.linregress(x_train, y_train)
-    print('r-value: ', reg.rvalue)
-    print('p-value: ', reg.pvalue)
-    print('slope: ', reg.slope)
-    print('intercept: ', reg.intercept)
-
-    plt.figure()
-    plt.plot(x_test, y_test, 'b.')
-    plt.plot(x_test, x_test*reg.slope + reg.intercept, 'r-', linewidth=3)
-    plt.show()
-
-    #Perform a stats polynomial regresson between the height and frequency
-    print('Polynomial:')
-    coeff = np.polyfit(x_train, y_train, 9)
-    y_fit = np.polyval(coeff, x_test)
     
-    x_new = np.linspace(x_test.min(), x_test.max(), len(x_test))
-    y_smooth = interpolate.spline(np.array(x_test), y_fit, x_new)
-
-    tckp, u = interpolate.splprep([x_new, y_fit], s=10, k=4, nest=-1)
-    x_smooth, y_smooth = interpolate.splev(x_new, tckp)
-
-
-    plt.figure()
-    plt.plot(x_new, y_test, 'b.')
-    plt.plot(x_new, y_fit, 'g-', alpha=1)
-    #pylab.plot(x_new, y_smooth, 'r-')
-    plt.show()
-
     #Find the P-Value to see if there is a relationship between height and step frequency with machine learning
     #print('Regression:')
-    #ML_regress(X, data_sum['Height'].values)
+    ML_regress(temp_df[['freq']].values, data_sum['Height'].values)
 
     #Use regression for when input and output are numbers and use classifier for when determining gender, injured, or walking on stairs
+
 
     data_sum.to_csv('output.csv')
 
