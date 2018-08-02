@@ -194,8 +194,8 @@ def update_freq(data_sum, names):
 def main():
     names = ['1_left', '1_right', '2_left', '2_right', '3_left', '3_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
             '6_right', '7_left', '7_right', '8_left', '8_right', '9_left', '9_right', '10_left', '10_right', \
-            '11_left', '11_right', '12_left', '12_right', '14_left', '14_right', '15_left', '15_right', \
-            '16_left', '16_right', '17_left', '17_right']
+            '11_left', '11_right', '12_left', '12_right', '13_left', '13_right', '14_left', '14_right', '15_left', '15_right', \
+            '16_left', '16_right', '17_left', '17_right', '18_left', '18_right']
     data_sum = pd.read_csv('Data/Data_Summary.csv')
 
     #Find the average step frequencies for each person's left and right feet
@@ -223,9 +223,18 @@ def main():
     #Does each person have a different step frequency
     #(Use an ANOVA test and note that f p < 0.05 there is a difference between the means of the groups)
     print('ANOVA:')
-    #anova = stats.f_oneway(sensor_data['1_left_FT'].acceleration, sensor_data['1_right_FT'].acceleration, sensor_data['2_left_FT'].acceleration, sensor_data['2_right_FT'].acceleration)
+    anova = stats.f_oneway(sensor_data['1_left_FT'].acceleration, sensor_data['1_right_FT'].acceleration, sensor_data['2_left_FT'].acceleration, sensor_data['2_right_FT'].acceleration,\
+    sensor_data['3_left_FT'].acceleration, sensor_data['3_right_FT'].acceleration, sensor_data['4_left_FT'].acceleration, sensor_data['1_right_FT'].acceleration, \
+    sensor_data['3_left_FT'].acceleration, sensor_data['3_right_FT'].acceleration, sensor_data['4_left_FT'].acceleration, sensor_data['4_right_FT'].acceleration, \
+    sensor_data['5_left_FT'].acceleration, sensor_data['5_right_FT'].acceleration, sensor_data['6_left_FT'].acceleration, sensor_data['6_right_FT'].acceleration, \
+    sensor_data['7_left_FT'].acceleration, sensor_data['7_right_FT'].acceleration, sensor_data['8_left_FT'].acceleration, sensor_data['8_right_FT'].acceleration, \
+    sensor_data['9_left_FT'].acceleration, sensor_data['9_right_FT'].acceleration, sensor_data['10_left_FT'].acceleration, sensor_data['10_right_FT'].acceleration, \
+    sensor_data['11_left_FT'].acceleration, sensor_data['11_right_FT'].acceleration, sensor_data['12_left_FT'].acceleration, sensor_data['12_right_FT'].acceleration, \
+    sensor_data['13_left_FT'].acceleration, sensor_data['13_right_FT'].acceleration, sensor_data['14_left_FT'].acceleration, sensor_data['14_right_FT'].acceleration, \
+    sensor_data['15_left_FT'].acceleration, sensor_data['15_right_FT'].acceleration, sensor_data['16_left_FT'].acceleration, sensor_data['16_right_FT'].acceleration, \
+    sensor_data['17_left_FT'].acceleration, sensor_data['17_right_FT'].acceleration, sensor_data['18_left_FT'].acceleration, sensor_data['18_right_FT'].acceleration)
     #anova = stats.f_oneway(sensor_data)
-    #print(anova.pvalue)
+    print(anova.pvalue)
 
     #Perform a stats linear regression between the height and the frequency
     print('Stats Regression:')
