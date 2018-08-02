@@ -35,6 +35,7 @@ def filter_and_fft(walk_data, data):
     data_FT = data_FT.abs()
 
     #Determine the sampling frequency
+
     Fs = round(len(data)/data.at[len(data)-1, 'time']) #samples per second
     #dF = Fs/len(temp)
    
@@ -47,6 +48,7 @@ def plot_acc(df, x_axis, output_name):
     plt.plot(df[x_axis], df['acceleration'])
     plt.title('Total Linear Acceleration')
     plt.xlabel(x_axis)
+    plt.show()
     #plt.savefig(output_name + '_acc.png')
     #plt.close()
 
@@ -103,17 +105,28 @@ def analyzePeaks(dir, file_ext, n, mode):
             print("error in mode arg for analyzePeaks")
             break;
         
-        data_FT = filter_and_fft(walk_data, data)
-        
-        # ignore low freq noise
-        data_FT = data_FT[data_FT['freq'] > 0.4]
-        #plot_acc(data_FT[data_FT.acceleration > 50], 'freq', '')
-        
-        # Get the local max values, keep only the "significant" blips, lets say those above 40% of max blip
-        ind = argrelextrema(data_FT.acceleration.values, np.greater)
-        local_max = data_FT.acceleration.values[ind]
-        local_max = local_max[local_max > 0.5 * local_max.max()]
-        important_blips = important_blips.append(data_FT[data_FT['acceleration'].isin(local_max)])
+        # split data into 2
+        startInd = 0
+        length = len(walk_data)
+        for j in range(1, 3):
+
+            walk_data_segment = walk_data.iloc[startInd:startInd+int(length/2), :].reset_index().drop(columns=['index'])
+            data_segment = data.iloc[0:len(walk_data_segment), :].reset_index().drop(columns=['index']) # time needs to start from 0 again
+            startInd = startInd + int(length/2)
+
+            data_FT = filter_and_fft(walk_data_segment, data_segment)
+            
+            plt.plot(data_FT.freq, data_FT.acceleration)
+            plt.show()
+            # ignore low freq noise
+            data_FT = data_FT[data_FT['freq'] > 0.4]
+            #plot_acc(data_FT[data_FT.acceleration > 50], 'freq', '')
+            
+            # Get the local max values, keep only the "significant" blips, lets say those above 40% of max blip
+            ind = argrelextrema(data_FT.acceleration.values, np.greater)
+            local_max = data_FT.acceleration.values[ind]
+            local_max = local_max[local_max > 0.5 * local_max.max()]
+            important_blips = important_blips.append(data_FT[data_FT['acceleration'].isin(local_max)])
 
     return important_blips
 
@@ -125,8 +138,7 @@ def xy_peak_pairs(dir, file_ext, n):
     # extracts the 2 largest peaks that are characteristic of a signal
     xy_peaks = pd.DataFrame(columns = ['xfreq', 'yfreq'])
     
-    for i in range(1,n+1):
-	
+    for i in range(1,n+1):	
         # left and right 13 doesn't exist, skip it
         if i == 13:
             continue            
@@ -138,55 +150,65 @@ def xy_peak_pairs(dir, file_ext, n):
         walk_data[['ax']] = data[['ax']]        
         walk_data[['ay']] = data[['ay']]        
         
-        data_FT = filter_and_fft(walk_data, data)
-        
-        # ignore low freq noise
-        data_FT = data_FT[data_FT['freq'] > 0.4]
-        #plot_acc(data_FT[data_FT.acceleration > 50], 'freq', '')
-        
-        # Get the local max values, keep only the "significant" blips, lets say those above 40% of max blip
-        indx = argrelextrema(data_FT.ax.values, np.greater)
-        indy = argrelextrema(data_FT.ay.values, np.greater)
-        
-        xlocal_max = data_FT.ax.values[indx]
-        xlocal_max = xlocal_max[xlocal_max > 0.5 * xlocal_max.max()]
-        ylocal_max = data_FT.ay.values[indy]
-        ylocal_max = ylocal_max[ylocal_max > 0.5 * ylocal_max.max()]
-        
-        xlocal_max_freq = data_FT[data_FT['ax'].isin(xlocal_max)]['freq'].values
-        ylocal_max_freq = data_FT[data_FT['ay'].isin(ylocal_max)]['freq'].values
-        pairs = np.transpose([np.tile(xlocal_max_freq, len(ylocal_max_freq)), np.repeat(ylocal_max_freq, len(xlocal_max_freq))])
-        
-        xy_peaks = xy_peaks.append(pd.DataFrame(data=pairs,  columns=['xfreq', 'yfreq']))
+        # split data into 2
+        startInd = 0
+        length = len(walk_data)
+        for j in range(1, 3):
+
+            walk_data_segment = walk_data.iloc[startInd:startInd+int(length/2), :].reset_index().drop(columns=['index'])
+            data_segment = data.iloc[0:len(walk_data_segment), :].reset_index().drop(columns=['index']) # time needs to start from 0 again
+            startInd = startInd + int(length/2)
+
+            data_FT = filter_and_fft(walk_data_segment, data_segment)
+            
+            # ignore low freq noise
+            data_FT = data_FT[data_FT['freq'] > 0.4]            
+            
+            # Get the local max values, keep only the "significant" blips, lets say those above 40% of max blip
+            indx = argrelextrema(data_FT.ax.values, np.greater)
+            indy = argrelextrema(data_FT.ay.values, np.greater)
+            
+            xlocal_max = data_FT.ax.values[indx]
+            xlocal_max = xlocal_max[xlocal_max > 0.5 * xlocal_max.max()]
+            ylocal_max = data_FT.ay.values[indy]
+            ylocal_max = ylocal_max[ylocal_max > 0.5 * ylocal_max.max()]
+            
+            xlocal_max_freq = data_FT[data_FT['ax'].isin(xlocal_max)]['freq'].values
+            ylocal_max_freq = data_FT[data_FT['ay'].isin(ylocal_max)]['freq'].values
+            pairs = np.transpose([np.tile(xlocal_max_freq, len(ylocal_max_freq)), np.repeat(ylocal_max_freq, len(xlocal_max_freq))])
+            
+            xy_peaks = xy_peaks.append(pd.DataFrame(data=pairs,  columns=['xfreq', 'yfreq']))
 
     return xy_peaks
 
 def main():
 
-    #right = analyzePeaks('Data/Greyson', 'r', 6, 'euclid')
+    right = analyzePeaks('Data/Greyson', 'r', 6, 'euclid')
+    plt.plot(right.freq, right.acceleration, 'bo')
+    plt.show()
     #left = analyzePeaks('Data/Greyson', 'l', 6, 'euclid')
     #others_left = analyzePeaks('Data', '_left', 18, 'euclid')
     #others_right = analyzePeaks('Data', '_left', 18, 'euclid')
 	
     xy = xy_peak_pairs('Data/Greyson', 'l', 6)
-    plt.plot(xy['xfreq'], xy['yfreq'], 'bo')
-    plt.title('my x and y central frequencies left')
+    #plt.plot(xy['xfreq'], xy['yfreq'], 'bo')
+    #plt.title('my x and y central frequencies left')
 	
-    plt.figure()
-    others_xy = xy_peak_pairs('Data', '_left', 18)
-    plt.plot(others_xy['xfreq'], others_xy['yfreq'], 'bo')
-    plt.title('other people x and y central frequencies left')
+    #plt.figure()
+    #others_xy = xy_peak_pairs('Data', '_left', 18)
+    #plt.plot(others_xy['xfreq'], others_xy['yfreq'], 'bo')
+    #plt.title('other people x and y central frequencies left')
     
-    plt.figure()
-    xy = xy_peak_pairs('Data/Greyson', 'r', 6)
-    plt.plot(xy['xfreq'], xy['yfreq'], 'bo')
-    plt.title('my x and y central frequencies right')
+    #plt.figure()
+    #xy = xy_peak_pairs('Data/Greyson', 'r', 6)
+    #plt.plot(xy['xfreq'], xy['yfreq'], 'bo')
+    #plt.title('my x and y central frequencies right')
 	
-    plt.figure()
-    others_xy = xy_peak_pairs('Data', '_right', 18)
-    plt.plot(others_xy['xfreq'], others_xy['yfreq'], 'bo')
-    plt.title('other people x and y central frequencies right')
-    plt.show()
+    #plt.figure()
+    #others_xy = xy_peak_pairs('Data', '_right', 18)
+    #plt.plot(others_xy['xfreq'], others_xy['yfreq'], 'bo')
+    #plt.title('other people x and y central frequencies right')
+    #plt.show()
 	
 	
 
