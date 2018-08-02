@@ -11,6 +11,17 @@ from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LinearRegression
 import statsmodels.api as sm
+import math
+
+names = ['1_left', '1_right', '2_left', '2_right', '3_left', '3_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
+        '6_right', '7_left', '7_right', '8_left', '8_right', '9_left', '9_right', '10_left', '10_right', \
+        '11_left', '11_right', '12_left', '12_right', '13_left', '13_right', '14_left', '14_right', '15_left', '15_right', \
+        '16_left', '16_right', '17_left', '17_right', '18_left', '18_right']
+
+names_FT = ['1_left_FT', '1_right_FT', '2_left_FT', '2_right_FT', '3_left_FT', '3_right_FT', '4_left_FT', '4_right_FT', '5_left_FT', '5_right_FT', '6_left_FT', \
+        '6_right_FT', '7_left_FT', '7_right_FT', '8_left_FT', '8_right_FT', '9_left_FT', '9_right_FT', '10_left_FT', '10_right_FT', \
+        '11_left_FT', '11_right_FT', '12_left_FT', '12_right_FT', '13_left_FT', '13_right_FT', '14_left_FT', '14_right_FT', '15_left_FT', '15_right_FT', \
+        '16_left_FT', '16_right_FT', '17_left_FT', '17_right_FT', '18_left_FT', '18_right_FT']
 
 OUTPUT_TEMPLATE_CLASSIFIER = (
     'Bayesian classifier: {bayes:.3g}\n'
@@ -41,7 +52,6 @@ def ML_classifier(X, y):
     svc_model = SVC(kernel='linear')
 
     models = [bayes_model, knn_model, svc_model]
-    # plt.close('all')
 
     for i, m in enumerate(models):  # yes, you can leave this loop in if you want.
         m.fit(X_train, y_train)
@@ -57,17 +67,14 @@ def ML_classifier(X, y):
 def ML_regress(X, y):
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
-
     #Linear regression
     lin_reg = LinearRegression(fit_intercept=True)
     lin_reg.fit(X_train, y_train)
 
-    plt.plot(X_train, y_train, 'b.')
-    plt.show()
     plt.figure()
-    plt.plot(X_test, lin_reg.predict(X_test), 'g.')
-    plt.plot(X_train, lin_reg.predict(X_train), 'r-')
-    plt.show()
+    plt.plot(X_test, y_test, 'b.')
+    plt.plot(X_test, lin_reg.predict(X_test), 'g-')
+    plt.savefig('ML_regression.png')
 
     #Score is the r-squared value. If this value is negative it means the linear regression is worse than using
     #a horizontal line (i.e. the mean)
@@ -84,7 +91,8 @@ def stats_regress(x, y):
     plt.figure()
     plt.plot(x_test, y_test, 'b.')
     plt.plot(x_test, x_test*reg.slope + reg.intercept, 'r-', linewidth=3)
-    plt.show()
+    plt.savefig('lin_regression.png')
+    plt.close()
 
     x_new_test = np.linspace(x_test.min(), x_test.max(), len(x_test))
 
@@ -93,12 +101,12 @@ def stats_regress(x, y):
 
     plt.figure()
     plt.plot(x_test, y_test, 'b.')
-    plt.plot(x_new_test, y_fit, 'go-')
-    plt.show()
+    plt.plot(x_new_test, y_fit, 'g-')
+    plt.savefig('poly_regression.png')
+    plt.close()
 
     data = pd.DataFrame({'y': y, 'x': x, 'intercept': 1})
     results = sm.OLS(data['y'], data[['x', 'intercept']]).fit()
-
 
     print(OUTPUT_TEMPLATE_REGRESS.format(
         pval=reg.pvalue,
@@ -109,8 +117,6 @@ def stats_regress(x, y):
         summary=results.summary(),
         pol_reg=coeff,
     ))
-
-
 
 def filter_df(df):
     b, a = signal.butter(3, 0.1, btype='lowpass', analog=False)
@@ -143,6 +149,7 @@ def update_freq(data_sum, names):
     data_sum = data_sum.set_index('F_name')
     #Don't need the dictonary right now
     sensor_data = {}
+    
 
     for i in range(len(names)):
         str_name =  'Data/' + names[i] + '.csv'
@@ -178,8 +185,22 @@ def update_freq(data_sum, names):
         max_ind = ind.idxmax()
         avg_freq = data_FT.at[max_ind, 'freq']
 
-        #Store into the main dataframe
+        #Store into the main dataframe and FT dataframe
         data_sum.at[names[i], 'freq'] = avg_freq
+
+        #Transform the data to fit a normal distribution
+        max_val = data_FT['acceleration'].nlargest(n=1)
+        max_val_ind = max_val.idxmax()
+        data_FT.at[max_val_ind, 'acceleration'] = temp_FT['acceleration'].max()
+        data_FT['acceleration'] = data_FT['acceleration'].apply(math.log)
+        #data_FT['acceleration'] = data_FT['acceleration'].apply(abs)
+
+        plot_acc(data_FT, 'freq', names[i] + '_transformed')
+
+        #if i==0:
+        #    acc_FT = pd.DataFrame({names[i]: [data_FT]})
+        #else:
+        #    pd.concat([acc_FT, data_FT], axis=1)
 
         #Store in the dictionary
         str_filt = names[i] + '_filt'
@@ -192,10 +213,6 @@ def update_freq(data_sum, names):
     return data_sum, sensor_data
 
 def main():
-    names = ['1_left', '1_right', '2_left', '2_right', '3_left', '3_right', '4_left', '4_right', '5_left', '5_right', '6_left', \
-            '6_right', '7_left', '7_right', '8_left', '8_right', '9_left', '9_right', '10_left', '10_right', \
-            '11_left', '11_right', '12_left', '12_right', '13_left', '13_right', '14_left', '14_right', '15_left', '15_right', \
-            '16_left', '16_right', '17_left', '17_right', '18_left', '18_right']
     data_sum = pd.read_csv('Data/Data_Summary.csv')
 
     #Find the average step frequencies for each person's left and right feet
@@ -221,6 +238,11 @@ def main():
 
     #Perform a statistical analysis
     #Does each person have a different step frequency
+    #Perform a normal test on the data
+    for i in range(len(names_FT)):
+        print('Normal test:')
+        print(stats.normaltest(sensor_data[names_FT[i]].acceleration).pvalue)
+
     #(Use an ANOVA test and note that f p < 0.05 there is a difference between the means of the groups)
     print('ANOVA:')
     anova = stats.f_oneway(sensor_data['1_left_FT'].acceleration, sensor_data['1_right_FT'].acceleration, sensor_data['2_left_FT'].acceleration, sensor_data['2_right_FT'].acceleration,\
@@ -233,7 +255,7 @@ def main():
     sensor_data['13_left_FT'].acceleration, sensor_data['13_right_FT'].acceleration, sensor_data['14_left_FT'].acceleration, sensor_data['14_right_FT'].acceleration, \
     sensor_data['15_left_FT'].acceleration, sensor_data['15_right_FT'].acceleration, sensor_data['16_left_FT'].acceleration, sensor_data['16_right_FT'].acceleration, \
     sensor_data['17_left_FT'].acceleration, sensor_data['17_right_FT'].acceleration, sensor_data['18_left_FT'].acceleration, sensor_data['18_right_FT'].acceleration)
-    #anova = stats.f_oneway(sensor_data)
+    #anova = stats.f_oneway(*acc_FT)
     print(anova.pvalue)
 
     #Perform a stats linear regression between the height and the frequency
@@ -248,8 +270,6 @@ def main():
     #Find the P-Value to see if there is a relationship between height and step frequency with machine learning
     #print('Regression:')
     ML_regress(temp_df[['freq']].values, data_sum['Height'].values)
-
-    #Use regression for when input and output are numbers and use classifier for when determining gender, injured, or walking on stairs
 
 
     data_sum.to_csv('output.csv')
