@@ -14,6 +14,8 @@ Simply clone the repository and run the following command:
       
        python main.py 
        
+The file analysis2.py is run with no arguments. However, it must be in the same folder as Data, and the datafiles in the Data folders must not be renamed or moved to different subfolders.
+       
 ## Output      
 
 In this project we compute the Fourier Transform of the walking data and plot the frequency of the walking pattern. We also create a Machine Learning model to predict the height, level of activity, and gender of an individual based on their walking pattern.
