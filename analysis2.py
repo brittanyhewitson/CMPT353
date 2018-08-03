@@ -4,6 +4,13 @@ import matplotlib.pyplot as plt
 from scipy import signal, stats
 from math import sqrt
 from scipy.signal import argrelextrema
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import FunctionTransformer, PolynomialFeatures, StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LinearRegression
 
 OUTPUT_TEMPLATE_CLASSIFIER = (
     'Bayesian classifier: {bayes:.3g}\n'
@@ -17,7 +24,43 @@ OUTPUT_TEMPLATE_REGRESS = (
 )
 
 
+def ML_classifier(X, y):
 
+    X_train, X_test, y_train, y_test = train_test_split(X, y)
+    '''
+    #Try scaling:
+    bayes_model = make_pipeline(
+        StandardScaler(),
+        GaussianNB()
+    )
+
+    knn_model = make_pipeline(
+        StandardScaler(), 
+        KNeighborsClassifier(n_neighbors=4)
+    )
+
+    svc_model = make_pipeline(
+        StandardScaler(), 
+        SVC(kernel='linear')
+    )
+    '''
+
+    bayes_model = GaussianNB()
+    knn_model = KNeighborsClassifier(n_neighbors=3)
+    svc_model = SVC(kernel='linear')
+
+    models = [bayes_model, knn_model, svc_model]
+
+    for i, m in enumerate(models):  # yes, you can leave this loop in if you want.
+        m.fit(X_train, y_train)
+        # plot_predictions(m) # if we create a function to plot the prediction
+        # plt.savefig('predictions-%i.png' % (i,))
+
+    print(OUTPUT_TEMPLATE_CLASSIFIER.format(
+        bayes=bayes_model.score(X_test, y_test),
+        knn=knn_model.score(X_test, y_test),
+        svm=svc_model.score(X_test, y_test),
+    ))
 
 def filter_df(df):
     b, a = signal.butter(3, 0.1, btype='lowpass', analog=False)
@@ -97,13 +140,22 @@ def analyzePeaks(dir, file_ext, n, mode):
         if mode == 'euclid':
             #Take the Euclidean Norm
             walk_data['acceleration'] = data.apply(eucl_dist_a, axis=1)
-        elif mode == ax:
-            walk_data['acceleration'] = data[['ax']]
-        elif mode == ay:
-            walk_data['acceleration'] = data[['ay']]
+        elif mode == 'ax':
+            walk_data[['acceleration']] = data[['ax']]
+        elif mode == 'ay':
+            walk_data[['acceleration']] = data[['ay']]
         else:
             print("error in mode arg for analyzePeaks")
             break;
+        
+        #data_FT2 = filter_and_fft(walk_data, data)
+        #data_FT2 = data_FT2[data_FT2.freq > 0.5]
+        #data_FT2 = data_FT2[data_FT2.acceleration > 3]
+        #plt.figure()
+        #plt.xlabel('freq')
+        #plt.title('FFT of total acceleration')        
+        #plt.plot(data_FT2.freq, data_FT2.acceleration)
+        #plt.show()
         
         # split data into 2
         startInd = 0
@@ -116,8 +168,6 @@ def analyzePeaks(dir, file_ext, n, mode):
 
             data_FT = filter_and_fft(walk_data_segment, data_segment)
             
-            plt.plot(data_FT.freq, data_FT.acceleration)
-            plt.show()
             # ignore low freq noise
             data_FT = data_FT[data_FT['freq'] > 0.4]
             #plot_acc(data_FT[data_FT.acceleration > 50], 'freq', '')
@@ -183,34 +233,80 @@ def xy_peak_pairs(dir, file_ext, n):
 
 def main():
 
+    # left leg and right leg on flat ground
     right = analyzePeaks('Data/Greyson', 'r', 6, 'euclid')
-    plt.plot(right.freq, right.acceleration, 'bo')
-    plt.show()
-    #left = analyzePeaks('Data/Greyson', 'l', 6, 'euclid')
-    #others_left = analyzePeaks('Data', '_left', 18, 'euclid')
-    #others_right = analyzePeaks('Data', '_left', 18, 'euclid')
-	
-    xy = xy_peak_pairs('Data/Greyson', 'l', 6)
-    #plt.plot(xy['xfreq'], xy['yfreq'], 'bo')
-    #plt.title('my x and y central frequencies left')
-	
-    #plt.figure()
-    #others_xy = xy_peak_pairs('Data', '_left', 18)
-    #plt.plot(others_xy['xfreq'], others_xy['yfreq'], 'bo')
-    #plt.title('other people x and y central frequencies left')
+    left = analyzePeaks('Data/Greyson', 'l', 6, 'euclid')
     
-    #plt.figure()
-    #xy = xy_peak_pairs('Data/Greyson', 'r', 6)
-    #plt.plot(xy['xfreq'], xy['yfreq'], 'bo')
-    #plt.title('my x and y central frequencies right')
+    plt.plot(right.freq, right.acceleration, 'go', label='right leg')
+    plt.plot(left.freq, left.acceleration, 'bo', label='left leg')
+    plt.title('Left and Right leg Characteristic Frequencies')
+    plt.legend()
+    plt.xlabel('freq')
+    
+    right['label'] = 'right'
+    left['label'] = 'left'
+    
+    flat_ground_data = right.append(left)
+    print("Left leg vs right leg classification:")
+    ML_classifier(flat_ground_data[['freq', 'acceleration']].values, flat_ground_data['label'].values)
+    
+    # left leg and right leg on stairs
+    right_s = analyzePeaks('Data/Greyson/stairs', 'sr', 7, 'euclid')
+    left_s = analyzePeaks('Data/Greyson/stairs', 'sl', 7, 'euclid')
+    stair_data = right_s.append(left_s)
+    stair_data['label'] = 'stairs'
+    
+    plt.figure()
+    plt.plot(flat_ground_data.freq, flat_ground_data.acceleration, 'go', label='ground')
+    plt.plot(stair_data.freq, stair_data.acceleration, 'bo', label='stairs')    
+    plt.legend()    
+    plt.title('Stairs vs Flat Ground')
+    plt.xlabel('freq')
+    
+    flat_ground_data['label'] = 'flat'    
+    my_walking_data = stair_data.append(flat_ground_data)
+    print("Ground vs Stairs classification")    
+    ML_classifier(my_walking_data[['freq', 'acceleration']].values, my_walking_data['label'].values)
+    
+    
+    # x vs y frequency comparisons
+    print("x vs y")
+    xy_left = xy_peak_pairs('Data/Greyson', 'l', 6)
+    xy_right = xy_peak_pairs('Data/Greyson', 'r', 6)
+    
+    plt.figure()
+    plt.plot(xy_right.xfreq, xy_right.yfreq, 'go', label='right leg')
+    plt.plot(xy_left.xfreq, xy_left.yfreq, 'bo', label='left leg')
+    plt.title('Left and Right leg Characteristic Frequencies x vs y')
+    plt.legend()
+    plt.xlabel('freq')
+    plt.ylabel('yfreq')
+    
+    xy_right['label'] = 'right'
+    xy_left['label'] = 'left'
+    
+    xy_ground_data = xy_right.append(xy_left)
+    ML_classifier(xy_ground_data[['xfreq', 'yfreq']].values, xy_ground_data['label'].values)
+    
+    # Stairs
+    xy_right_s = xy_peak_pairs('Data/Greyson/stairs', 'sr', 7)
+    xy_left_s = xy_peak_pairs('Data/Greyson/stairs', 'sl', 7)
+    xy_stair_data = xy_right_s.append(xy_left_s)
+    xy_stair_data['label'] = 'stairs'
+    
+    plt.figure()
+    plt.plot(xy_ground_data.xfreq, xy_ground_data.yfreq, 'go', label='ground')
+    plt.plot(xy_stair_data.xfreq, xy_stair_data.yfreq, 'bo', label='stairs')    
+    plt.legend()    
+    plt.title('Stairs vs Flat Ground')
+    plt.xlabel('xfreq')
+    plt.ylabel('yfreq')
+    
+    xy_ground_data['label'] = 'flat'    
+    xy_walking_data = xy_stair_data.append(xy_ground_data)    
+    ML_classifier(xy_walking_data[['xfreq', 'yfreq']].values, xy_walking_data['label'].values)
 	
-    #plt.figure()
-    #others_xy = xy_peak_pairs('Data', '_right', 18)
-    #plt.plot(others_xy['xfreq'], others_xy['yfreq'], 'bo')
-    #plt.title('other people x and y central frequencies right')
-    #plt.show()
-	
-	
+    plt.show()
 
 
 if __name__=='__main__':
