@@ -96,8 +96,20 @@ def ML_regress(X, y, name_test):
     plt.plot(X_test, lin_reg.predict(X_test), 'g-')
     plt.xlabel('Step Frequency')
     plt.ylabel(name_test)
-    plt.title('ML Linear regression for ' + name_test + 'Versus Step Frequency')
+    plt.legend(['Original Data', 'Regression Line'])
+    plt.title('ML Linear regression for ' + name_test + ' Versus Step Frequency\n Testing Data')
     plt.savefig('ML_regression' + name_test + '.png')
+    plt.close()
+
+    plt.figure()
+    plt.plot(X_train, y_train, 'b.')
+    plt.plot(X_train, lin_reg.predict(X_train), 'g-')
+    plt.xlabel('Step Frequency')
+    plt.ylabel(name_test)
+    plt.legend(['Original Data', 'Regression Line'])
+    plt.title('ML Linear regression for ' + name_test + ' Versus Step Frequency\n Training Data')
+    plt.savefig('ML_regression' + name_test + '_train.png')
+    plt.close()
 
     #Score is the r-squared value. If this value is negative it means the linear regression is worse than using
     #a horizontal line (i.e. the mean)
@@ -116,24 +128,48 @@ def stats_regress(x, y, name_test):
     plt.plot(x_test, x_test*reg.slope + reg.intercept, 'r-', linewidth=3)
     plt.xlabel('Step Frequency')
     plt.ylabel(name_test)
-    plt.title('Linear regression for ' + name_test + 'Versus Step Frequency')
+    plt.legend(['Original Data', 'Regression Line'])
+    plt.title('Linear regression for ' + name_test + ' Versus Step Frequency\n Testing Data')
     plt.savefig('lin_regression' + name_test + '.png')
+    plt.close()
+
+    plt.figure()
+    plt.plot(x_train, y_train, 'b.')
+    plt.plot(x_train, x_train*reg.slope + reg.intercept, 'r-', linewidth=3)
+    plt.xlabel('Step Frequency')
+    plt.ylabel(name_test)
+    plt.legend(['Original Data', 'Regression Line'])
+    plt.title('Linear regression for ' + name_test + ' Versus Step Frequency\n Training Data')
+    plt.savefig('lin_regression' + name_test + '_train.png')
     plt.close()
 
     #Perform polynomial regression
     x_new_test = np.linspace(x_test.min(), x_test.max(), len(x_test))
+    x_new_train = np.linspace(x_train.min(), x_train.max(), len(x_train))
 
     coeff = np.polyfit(x, y, 5)
     y_fit = np.polyval(coeff, x_new_test)
-    print(coeff)
+    y_fit_train = np.polyval(coeff, x_new_train)
+
 
     plt.figure()
     plt.plot(x_test, y_test, 'b.')
     plt.plot(x_new_test, y_fit, 'go-')
     plt.xlabel('Step Frequency')
     plt.ylabel(name_test)
-    plt.title('Polynomial regression for ' + name_test + 'Versus Step Frequency')
+    plt.legend(['Original Data', 'Regression Curve'])
+    plt.title('Polynomial regression for ' + name_test + ' Versus Step Frequency\n Testing Data')
     plt.savefig('poly_regression' + name_test + '.png')
+    plt.close()
+
+    plt.figure()
+    plt.plot(x_train, y_train, 'b.')
+    plt.plot(x_new_train, y_fit_train, 'go-')
+    plt.xlabel('Step Frequency')
+    plt.ylabel(name_test)
+    plt.legend(['Original Data', 'Regression Curve'])
+    plt.title('Polynomial regression for ' + name_test + ' Versus Step Frequency\n Training Data')
+    plt.savefig('poly_regression' + name_test + '_train.png')
     plt.close()
 
     #residuals = y_train - (reg.slope*x_train + reg.intercept)
@@ -260,6 +296,86 @@ def update_spreadsheet(data_sum, names):
 
     return data_sum, sensor_data
 
+def create_visuals(temp_df):
+    #Create visualzations
+    #Histogram of frequency distribution
+    plt.figure()
+    temp_freq = temp_df['freq']
+    temp_freq.plot.hist(alpha=0.5)
+    plt.title('Distribution of Frequencies')
+    plt.xlabel('Frequencies (Steps per Second)')
+    plt.ylabel('Count')
+    plt.savefig('freq_distribution.png')
+    #plt.show()
+    plt.close()
+
+    #Histogram of weight distribution
+    #plt.figure
+    f = plt.figure()
+    f.add_subplot(1, 3, 1)
+    temp_freq = temp_df['Weight']
+    temp_freq.plot.hist(alpha=0.5)
+    plt.title('Distribution of Weights')
+    plt.xlabel('Weight (kg)')
+    plt.ylabel('Count')
+    #plt.savefig('freq_distribution.png')
+    #plt.show()
+    #plt.close()
+
+    #Histogram of age distribution
+    f.add_subplot(1, 3, 2)
+    temp_freq = temp_df['Age']
+    temp_freq.plot.hist(alpha=0.5)
+    plt.title('Distribution of Ages')
+    plt.xlabel('Age')
+    plt.ylabel('Count')
+    #plt.savefig('freq_distribution.png')
+    #plt.show()
+    #plt.close()
+
+    #Histogram of height distribution
+    f.add_subplot(1, 3, 3)
+    temp_freq = temp_df['Height']
+    temp_freq.plot.hist(alpha=0.5)
+    plt.title('Distribution of Heights')
+    plt.xlabel('Height (cm)')
+    plt.ylabel('Count')
+    plt.savefig('distributions.png')
+    #plt.show()
+    #plt.close()
+    plt.close()
+
+    #Plot the pie charts for what our data consists of
+    #Gender breakdown
+    plt.figure()
+    temp_gender = temp_df.groupby('Gender').aggregate('count')
+    temp_gender['Subject'].plot.pie(autopct='%.2f', figsize=(6, 6))
+    plt.title('Percentage of Males versus Females')
+    plt.savefig('gender_pie.png')
+    #plt.show()
+    plt.close()
+
+    #Level of Activity breakdown
+    plt.figure
+    f.add_subplot(1, 3, 2)
+    temp_LOA = temp_df.groupby('Level of Activity').aggregate('count')
+    temp_LOA['Subject'].plot.pie(autopct='%.2f', figsize=(6, 6))
+    plt.title('Breakdown of the Level of Activity of Subjects')
+    plt.savefig('LOA_pie.png')
+    #plt.show()
+    plt.close()
+
+    #Activity of Choice breakdown
+    plt.figure()
+    f.add_subplot(1, 3, 3)
+    temp_AOC = temp_df.groupby('Activity of Choice').aggregate('count')
+    temp_AOC['Subject'].plot.pie(autopct='%.2f', figsize=(6, 6))
+    plt.title('Breakdown of the Activity of Choice for Subjects')
+    plt.savefig('AOC_pie.png')
+    #plt.show()
+    plt.close()
+
+
 def main():
     data_sum = pd.read_csv('Data/Data_Summary.csv')
 
@@ -271,22 +387,25 @@ def main():
     data_sum = data_sum[is_na['Gender'] == False]
     data_sum = data_sum[data_sum['freq_1'] != '']
     data_sum = data_sum[data_sum['freq_2'] != '']
+
     temp_1 = data_sum.rename(columns={'freq_1': 'freq'})
     temp_2 = data_sum.rename(columns={'freq_2': 'freq'})
     temp_df = pd.concat([temp_1, temp_2], axis=0)
-    temp_df_X = temp_df['freq'].apply(float)
+    #temp_df_X = temp_df['freq']#.apply(float)
     X = temp_df[['freq']].values
     
+    create_visuals(temp_df)
+    
     #See if there is a relationshp between step frequency and level of activity
-    print('Level of Activity:')
+    print('LEVEL OF ACTIVTY:')
     ML_classifier(X, temp_df['Level of Activity'].values)
 
     #See if there is a relationship between step frequency and gender
-    print('Gender:')
+    print('GENDER:')
     ML_classifier(X, temp_df['Gender'].values)
 
     #See if there is a relationship between step frequency and activity of choice
-    print('Activity of Choice:')
+    print('ACTIVITY OF CHOICE:')
     ML_classifier(X, temp_df['Activity of Choice'].values)
 
     #Perform a statistical analysis
@@ -314,36 +433,36 @@ def main():
     print(anova.pvalue)
 
     #Stats Regression
-    print('Stats Regression:')
+    print('STATS REGRESSION:')
     temp_df = temp_df.sort_values('freq')
     x = temp_df['freq'].apply(float)
 
     #Perform a stats regression between the height and the frequency
-    print('Height:')
+    print('Height')
     stats_regress(x, temp_df['Height'].apply(float), 'Height')
 
     #Perform a stats regression between the age and the frequency
-    print('Age:')
+    print('Age')
     stats_regress(x, temp_df['Age'].apply(float), 'Age')
 
     #Perform a stats regression between the weight and the frequency
-    print('Weight:')
+    print('Weight')
     stats_regress(x, temp_df['Weight'].apply(float), 'Weight')
 
     
     #Perform a machine learning regression
-    print('ML Regression:')
+    print('ML REGRESSION:')
 
     #Find the P-Value to see if there is a relationship between height and step frequency with machine learning
-    print('Height:')
+    print('Height')
     ML_regress(X, temp_df['Height'].values, 'Height')
 
     #Find the P-Value to see if there is a relationship between age and step frequency with machine learning
-    print('Age:')
+    print('Age')
     ML_regress(X, temp_df['Age'].values, 'Age')
 
     #Find the P-Value to see if there is a relationship between weight and step frequency with machine learning
-    print('Weight:')
+    print('Weight')
     ML_regress(X, temp_df['Weight'].values, 'Weight')
 
     data_sum.to_csv('output.csv')
