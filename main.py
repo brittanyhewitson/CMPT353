@@ -227,8 +227,8 @@ def plot_spec(df, x_axis, output_name, name):
         This function plots the data in the 'name' column of the datafram 'df'
     '''
     plt.figure()
-    plt.plot(df[x_axis], df[name], name)
-    plt.title('Total Linear Acceleration')
+    plt.plot(df[x_axis], df[name])
+    plt.title('Total Linear ' + name)
     plt.xlabel(x_axis)
     plt.savefig(output_name + '_' + name + '.png')
     plt.close()
