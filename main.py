@@ -46,6 +46,9 @@ OUTPUT_TEMPLATE_REGRESS = (
 
 
 def ML_classifier(X, y):
+    '''
+        This function applies 3 different machine learning classifiers to the X, y data. It prints the score of each classifier to the output
+    '''
 
     X_train, X_test, y_train, y_test = train_test_split(X, y)
     '''
@@ -65,18 +68,17 @@ def ML_classifier(X, y):
         SVC(kernel='linear')
     )
     '''
-
+    #Create the models
     bayes_model = GaussianNB()
     knn_model = KNeighborsClassifier(n_neighbors=3)
     svc_model = SVC(kernel='linear')
 
+    #Iterate through the models
     models = [bayes_model, knn_model, svc_model]
-
     for i, m in enumerate(models):  # yes, you can leave this loop in if you want.
         m.fit(X_train, y_train)
-        # plot_predictions(m) # if we create a function to plot the prediction
-        # plt.savefig('predictions-%i.png' % (i,))
 
+    #Print to output
     print(OUTPUT_TEMPLATE_CLASSIFIER.format(
         bayes=bayes_model.score(X_test, y_test),
         knn=knn_model.score(X_test, y_test),
@@ -85,12 +87,19 @@ def ML_classifier(X, y):
 
 
 def ML_regress(X, y, name_test):
+    '''
+        This function performs linear regression on the X, y data using machine learning techniques. The name_test is the name of the constraint being tested 
+        against and is used in plotting the results. The resulting linear regression is plotted for the training data and the testing data, and then saved
+        as a .png to the directory
+    '''
+
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
-    #Linear regression
+    # perform linear regression
     lin_reg = LinearRegression(fit_intercept=True)
     lin_reg.fit(X_train, y_train)
 
+    #Plot the regression for testing data
     plt.figure()
     plt.plot(X_test, y_test, 'b.')
     plt.plot(X_test, lin_reg.predict(X_test), 'g-')
@@ -101,6 +110,7 @@ def ML_regress(X, y, name_test):
     plt.savefig('ML_regression' + name_test + '.png')
     plt.close()
 
+    #Plot the regression for training data
     plt.figure()
     plt.plot(X_train, y_train, 'b.')
     plt.plot(X_train, lin_reg.predict(X_train), 'g-')
@@ -119,10 +129,17 @@ def ML_regress(X, y, name_test):
 
 
 def stats_regress(x, y, name_test):
+    '''
+        This function performs linear and polynomial regression on the x, y data using statistical techniques. The name_test is the name of the constraint being tested 
+        against and is used in plotting the results. The resulting linear regression is plotted for the training data and the testing data, and then saved
+        as a .png to the directory
+    '''
     x_train, x_test, y_train, y_test = train_test_split(x, y)
 
+    #Perform linear regression
     reg = stats.linregress(x_train, y_train)
 
+    #Plot the regression line for the testing data
     plt.figure()
     plt.plot(x_test, y_test, 'b.')
     plt.plot(x_test, x_test*reg.slope + reg.intercept, 'r-', linewidth=3)
@@ -133,6 +150,7 @@ def stats_regress(x, y, name_test):
     plt.savefig('lin_regression' + name_test + '.png')
     plt.close()
 
+    #Plot the regression line for the training data
     plt.figure()
     plt.plot(x_train, y_train, 'b.')
     plt.plot(x_train, x_train*reg.slope + reg.intercept, 'r-', linewidth=3)
@@ -144,14 +162,16 @@ def stats_regress(x, y, name_test):
     plt.close()
 
     #Perform polynomial regression
+    #Create linearly spaced data for the polynomial regression
     x_new_test = np.linspace(x_test.min(), x_test.max(), len(x_test))
     x_new_train = np.linspace(x_train.min(), x_train.max(), len(x_train))
 
+    #Fit the model to the data
     coeff = np.polyfit(x, y, 5)
     y_fit = np.polyval(coeff, x_new_test)
     y_fit_train = np.polyval(coeff, x_new_train)
 
-
+    #Plot the regression curve on the testing data
     plt.figure()
     plt.plot(x_test, y_test, 'b.')
     plt.plot(x_new_test, y_fit, 'go-')
@@ -162,6 +182,7 @@ def stats_regress(x, y, name_test):
     plt.savefig('poly_regression' + name_test + '.png')
     plt.close()
 
+    #Plot the regression curve on the training data
     plt.figure()
     plt.plot(x_train, y_train, 'b.')
     plt.plot(x_new_train, y_fit_train, 'go-')
@@ -177,9 +198,11 @@ def stats_regress(x, y, name_test):
     #plt.plot(x_train, residuals, 'b-')
     #plt.show()
 
+    #Perform OLS regression. However, the residuals are not normally distributed, so it doesn't apply
     data = pd.DataFrame({'y': y, 'x': x, 'intercept': 1})
     results = sm.OLS(data['y'], data[['x', 'intercept']]).fit()
 
+    #Print results to output
     print(OUTPUT_TEMPLATE_REGRESS.format(
         pval=reg.pvalue,
         rval=reg.rvalue,
@@ -192,37 +215,44 @@ def stats_regress(x, y, name_test):
 
 
 def filter_df(df):
+    '''
+        This function filters the data using a lowpass butterworth filter
+    '''
     b, a = signal.butter(3, 0.1, btype='lowpass', analog=False)
     return signal.filtfilt(b, a, df)
 
 
-def plot_acc(df, x_axis, output_name):
+def plot_spec(df, x_axis, output_name, name):
+    '''
+        This function plots the data in the 'name' column of the datafram 'df'
+    '''
     plt.figure()
-    plt.plot(df[x_axis], df['acceleration'])
+    plt.plot(df[x_axis], df[name], name)
     plt.title('Total Linear Acceleration')
     plt.xlabel(x_axis)
-    plt.savefig(output_name + '_acc.png')
-    plt.close()
-
-
-def plot_vel(df, x_axis, output_name):
-    plt.figure()
-    plt.plot(df[x_axis], df['velocity'])
-    plt.title('Total Angular Velocity')
-    plt.xlabel(x_axis)
-    plt.savefig(output_name + '_vel.png')
+    plt.savefig(output_name + '_' + name + '.png')
     plt.close()
 
 
 def eucl_dist_w(df):
+    '''
+        This function calculates the euclidean norm for the angular velocity
+    '''
     return sqrt(df['wx']**2 + df['wy']**2 + df['wz']**2)
 
 
 def eucl_dist_a(df):
+    '''
+        This function calculates the euclidean norm for the linear acceleration
+    '''
     return sqrt(df['ax']**2 + df['ay']**2 + df['az']**2)
 
 
 def calc_FT(df, temp, i, num):
+    '''
+        This function calculates the Fourier transform of the data in the dataframe 'df'. The centre frequency at 0 samples/second
+        is removed to improve the spectrum so it fits a normal distribution
+    '''
     #Take the Fourier Transform of the data
     df_FT = df.apply(np.fft.fft, axis=0)
     df_FT = df_FT.apply(np.fft.fftshift, axis=0)
@@ -232,8 +262,8 @@ def calc_FT(df, temp, i, num):
     Fs = round(len(temp)/(temp['time'].iloc[-1]-temp['time'].iloc[0])) #samples per second
     df_FT['freq'] = np.linspace(-Fs/2, Fs/2, num=len(temp))
 
-    plot_acc(df_FT, 'freq', names[i] + '_' + str(num))
-    plot_vel(df_FT, 'freq', names[i] + '_' + str(num))
+    plot_spec(df_FT, 'freq', names[i] + '_' + str(num), 'acceleration')
+    plot_spec(df_FT, 'freq', names[i] + '_' + str(num), 'velocity')
 
     #Find the largest peak at a frequency greater than 0 to determine the average steps per second
     temp_FT = df_FT[df_FT.freq > 0.1]
@@ -247,17 +277,24 @@ def calc_FT(df, temp, i, num):
     df_FT.at[max_val_ind, 'acceleration'] = temp_FT['acceleration'].max()
     #df_FT['acceleration'] = df_FT['acceleration'].apply(log)
 
-    plot_acc(df_FT, 'freq', names[i] + '_transformed_' + str(num))
+    plot_spec(df_FT, 'freq', names[i] + '_transformed_' + str(num), 'acceleration')
 
     return df_FT, avg_freq
 
 
 def update_spreadsheet(data_sum, names):
+    '''
+        This functon updates the main dataframe used for the classification and regression. The data for each subject is 
+        split into two and then the avereage step frequency is determined and stored into the dataframe. The updated dataframe
+        and a dictionary holding the frequency spectra are returned
+    '''
+    #Initialize variables
     data_sum['freq_1'] = ''
     data_sum['freq_2'] = ''
     data_sum = data_sum.set_index('F_name')
     sensor_data = {}
 
+    #Iterate through each subject
     for i in range(len(names)):
         str_name =  'Data/' + names[i] + '.csv'
         temp = pd.read_csv(str_name)
@@ -297,6 +334,9 @@ def update_spreadsheet(data_sum, names):
     return data_sum, sensor_data
 
 def create_visuals(temp_df):
+    '''
+        This function creates visualizations of the data to be used in the report
+    '''
     #Create visualzations
     #Histogram of frequency distribution
     plt.figure()
@@ -391,9 +431,9 @@ def main():
     temp_1 = data_sum.rename(columns={'freq_1': 'freq'})
     temp_2 = data_sum.rename(columns={'freq_2': 'freq'})
     temp_df = pd.concat([temp_1, temp_2], axis=0)
-    #temp_df_X = temp_df['freq']#.apply(float)
     X = temp_df[['freq']].values
     
+    #Create visualizations of the data
     create_visuals(temp_df)
     
     #See if there is a relationshp between step frequency and level of activity
@@ -448,7 +488,6 @@ def main():
     #Perform a stats regression between the weight and the frequency
     print('Weight')
     stats_regress(x, temp_df['Weight'].apply(float), 'Weight')
-
     
     #Perform a machine learning regression
     print('ML REGRESSION:')
@@ -465,6 +504,7 @@ def main():
     print('Weight')
     ML_regress(X, temp_df['Weight'].values, 'Weight')
 
+    #Write the updated spreadsheet to an output
     data_sum.to_csv('output.csv')
 
 
